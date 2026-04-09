@@ -10,6 +10,7 @@ import {
   useReactFlow,
   ReactFlowProvider,
 } from '@xyflow/react'
+import { useIdeaStore } from '../store/useIdeaStore'
 
 const CATEGORY_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']
 
@@ -23,37 +24,59 @@ function RootNode({ data }) {
   )
 }
 
-function CategoryNode({ data }) {
+function CategoryNode({ id, data }) {
+  const { fetchNodeDescription, isExplaining, explainingNodeId } = useIdeaStore()
   const color = CATEGORY_COLORS[data.categoryIndex % CATEGORY_COLORS.length] || '#7c3aed'
+  const loading = isExplaining && explainingNodeId === id
+
   return (
     <div
       className="mind-node mind-node--category"
+      onClick={() => fetchNodeDescription(id, data.label)}
       style={{
         borderColor: color,
         background: `${color}18`,
         color: `${color}ee`,
-        boxShadow: `0 0 14px ${color}40`,
+        boxShadow: loading ? `0 0 20px ${color}` : `0 0 14px ${color}40`,
+        cursor: isExplaining ? 'wait' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        transition: 'all 0.2s ease'
       }}
     >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
+      {loading && <span className="spinner" style={{ width: 10, height: 10, borderTopColor: color }} />}
       {data.label}
     </div>
   )
 }
 
-function SubtopicNode({ data }) {
+function SubtopicNode({ id, data }) {
+  const { fetchNodeDescription, isExplaining, explainingNodeId } = useIdeaStore()
   const color = CATEGORY_COLORS[data.categoryIndex % CATEGORY_COLORS.length] || '#7c3aed'
+  const loading = isExplaining && explainingNodeId === id
+
   return (
     <div
       className="mind-node mind-node--subtopic"
+      onClick={() => fetchNodeDescription(id, data.label)}
       style={{
         borderColor: `${color}80`,
         background: `${color}0d`,
         color: `${color}cc`,
+        boxShadow: loading ? `0 0 15px ${color}60` : 'none',
+        cursor: isExplaining ? 'wait' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        transition: 'all 0.2s ease'
       }}
     >
       <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
+      {loading && <span className="spinner" style={{ width: 8, height: 8, borderTopColor: color }} />}
       {data.label}
     </div>
   )
@@ -82,7 +105,7 @@ function buildLayout(rawNodes, rawEdges) {
 
   const positions = {}
   const NODE_H = 80
-  const LEVEL_W = 220
+  const LEVEL_W = 240
 
   function assign(id, x, startY, endY) {
     const midY = (startY + endY) / 2
@@ -160,7 +183,7 @@ function MindMapInner({ mindMap }) {
       nodeTypes={nodeTypes}
       fitView
       fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
-      minZoom={0.3}
+      minZoom={0.2}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
     >

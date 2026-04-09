@@ -74,6 +74,56 @@ Rules:
 - Related ideas should be adjacent topics the creator could cover next`
 }
 
+function buildDescriptionPrompt(topic, mainPhrase) {
+  return `You are a world-class YouTube content consultant. Analyze the following specific sub-topic within the context of "${mainPhrase}".
+
+SUB-TOPIC: "${topic}"
+
+Return ONLY a valid JSON object with NO markdown, NO code blocks.
+
+Use this structure:
+{
+  "topic": "${topic}",
+  "description": "Clear, expert-level explanation (2-3 paragraphs) of why this topic matters and how it fits the niche.",
+  "expertTips": [
+    "Expert insight or secret tip related to this topic",
+    "Pro-level mistake to avoid",
+    "Niche-specific hack for growth"
+  ],
+  "angles": [
+    {"label": "The Educational Hook", "text": "A specific educational angle for a video"},
+    {"label": "The Storytelling Hook", "text": "A specific narrative/vlog angle for a video"}
+  ]
+}`
+}
+
+function buildScriptPrompt(topic, mainPhrase) {
+  return `You are a professional YouTube scriptwriter. Write a high-engagement, conversational video script for the topic: "${topic}" (context: ${mainPhrase}).
+
+The script should be roughly 10 minutes long if spoken. Focus on high retention.
+
+Return ONLY a valid JSON object with NO markdown, NO code blocks.
+
+Use this structure:
+{
+  "title": "Working Title of the Video",
+  "hook": "Intense, high-energy opening lines (0-30 seconds)",
+  "segments": [
+    {
+      "title": "Segment Header",
+      "content": "Fully written spoken script for this section",
+      "visualCue": "What should be on screen here? (e.g. B-roll of city, screen recording of app, etc.)"
+    }
+  ],
+  "outro": "Concluding thoughts and a strong call to action"
+}
+
+Rules:
+- Write in a natural, conversational style (use "I", "you", "we").
+- Keep segments focused and punchy.
+- Include exactly 4-6 segments.`
+}
+
 export async function generateIdeaMap(phrase, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
@@ -81,17 +131,49 @@ export async function generateIdeaMap(phrase, apiKey) {
   const result = await model.generateContent(buildPrompt(phrase))
   const text = result.response.text().trim()
 
-  // Extract JSON - handle cases where model wraps in markdown
   let jsonText = text
   const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (jsonMatch) {
-    jsonText = jsonMatch[0]
-  }
+  if (jsonMatch) jsonText = jsonMatch[0]
 
   try {
-    const data = JSON.parse(jsonText)
-    return data
+    return JSON.parse(jsonText)
   } catch {
     throw new Error('AI returned an invalid response. Please try again.')
+  }
+}
+
+export async function fetchTopicDescription(topic, mainPhrase, apiKey) {
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+  const result = await model.generateContent(buildDescriptionPrompt(topic, mainPhrase))
+  const text = result.response.text().trim()
+
+  let jsonText = text
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (jsonMatch) jsonText = jsonMatch[0]
+
+  try {
+    return JSON.parse(jsonText)
+  } catch {
+    throw new Error('AI failed to explain this topic. Please try again.')
+  }
+}
+
+export async function fetchTopicScript(topic, mainPhrase, apiKey) {
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+  const result = await model.generateContent(buildScriptPrompt(topic, mainPhrase))
+  const text = result.response.text().trim()
+
+  let jsonText = text
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (jsonMatch) jsonText = jsonMatch[0]
+
+  try {
+    return JSON.parse(jsonText)
+  } catch {
+    throw new Error('AI failed to generate a script. Please try again.')
   }
 }

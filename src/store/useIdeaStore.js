@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
+import { fetchTopicDescription, fetchTopicScript } from '../lib/gemini'
 
 // Custom storage engine for Zustand using IndexedDB (idb-keyval)
 const storage = {
@@ -23,8 +24,15 @@ export const useIdeaStore = create(
       currentPhrase: '',
       library: [],
       history: [],
-      resultsCache: {}, // { phrase: result }
+      resultsCache: {}, 
+      nodeDescriptionsCache: {}, 
+      scriptsCache: {}, // { label: scriptData }
+      selectedNodeDescription: null,
+      selectedNodeScript: null,
       isLoading: false,
+      isExplaining: false,
+      isScripting: false,
+      explainingNodeId: null,
       error: null,
       activeView: 'explore',
       apiKey: '',
@@ -37,12 +45,14 @@ export const useIdeaStore = create(
           currentResult: result,
           currentPhrase: phrase,
           error: null,
+          selectedNodeDescription: null,
+          selectedNodeScript: null,
           resultsCache: { ...resultsCache, [phrase.toLowerCase().trim()]: result },
         })
       },
 
       setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error, isLoading: false }),
+      setError: (error) => set({ error, isLoading: false, isExplaining: false, isScripting: false, explainingNodeId: null }),
       setView: (view) => set({ activeView: view }),
       setApiKey: (apiKey) => set({ apiKey }),
       setShowSettings: (show) => set({ showSettings: show }),
@@ -50,11 +60,8 @@ export const useIdeaStore = create(
       saveIdea: () => {
         const { currentResult, currentPhrase, library } = get()
         if (!currentResult || !currentPhrase) return
-
-        // Prevent duplicates
         const alreadySaved = library.some((i) => i.phrase === currentPhrase)
         if (alreadySaved) return
-
         const idea = {
           id: Date.now().toString(),
           phrase: currentPhrase,
@@ -79,6 +86,8 @@ export const useIdeaStore = create(
         set({
           currentResult: idea.result,
           currentPhrase: idea.phrase,
+          selectedNodeDescription: null,
+          selectedNodeScript: null,
           activeView: 'explore',
         })
       },
@@ -92,15 +101,60 @@ export const useIdeaStore = create(
         const { resultsCache } = get()
         return resultsCache[phrase.toLowerCase().trim()] || null
       },
+
+      fetchNodeDescription: async (nodeId, label) => {
+        const { currentPhrase, apiKey, nodeDescriptionsCache, isExplaining } = get()
+        if (isExplaining || !apiKey) return
+        if (nodeDescriptionsCache[label]) {
+          set({ selectedNodeDescription: nodeDescriptionsCache[label] })
+          window.dispatchEvent(new CustomEvent('idea-engine:tab-change', { detail: 'about' }))
+          return
+        }
+        set({ isExplaining: true, explainingNodeId: nodeId })
+        try {
+          const data = await fetchTopicDescription(label, currentPhrase, apiKey)
+          set({
+            selectedNodeDescription: data,
+            nodeDescriptionsCache: { ...nodeDescriptionsCache, [label]: data },
+            isExplaining: false,
+            explainingNodeId: null,
+          })
+          window.dispatchEvent(new CustomEvent('idea-engine:tab-change', { detail: 'about' }))
+        } catch (err) {
+          set({ error: err.message, isExplaining: false, explainingNodeId: null })
+        }
+      },
+
+      fetchNodeScript: async (label) => {
+        const { currentPhrase, apiKey, scriptsCache, isScripting } = get()
+        if (isScripting || !apiKey) return
+        if (scriptsCache[label]) {
+          set({ selectedNodeScript: scriptsCache[label] })
+          return
+        }
+        set({ isScripting: true })
+        try {
+          const data = await fetchTopicScript(label, currentPhrase, apiKey)
+          set({
+            selectedNodeScript: data,
+            scriptsCache: { ...scriptsCache, [label]: data },
+            isScripting: false,
+          })
+        } catch (err) {
+          set({ error: err.message, isScripting: false })
+        }
+      },
     }),
     {
       name: 'idea-engine-storage',
-      storage: storage, // Use the IndexedDB storage engine
+      storage: storage,
       partialize: (state) => ({
         library: state.library,
         history: state.history,
         apiKey: state.apiKey,
-        resultsCache: state.resultsCache, // Persist the AI results cache
+        resultsCache: state.resultsCache,
+        nodeDescriptionsCache: state.nodeDescriptionsCache,
+        scriptsCache: state.scriptsCache,
       }),
     }
   )
