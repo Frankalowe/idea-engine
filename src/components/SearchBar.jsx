@@ -8,7 +8,6 @@ export default function SearchBar() {
   const inputRef = useRef(null)
 
   const {
-    apiKey,
     isLoading,
     error,
     currentPhrase,
@@ -16,7 +15,6 @@ export default function SearchBar() {
     setLoading,
     setError,
     addToHistory,
-    setShowSettings,
     saveIdea,
     library,
     getCachedResult,
@@ -36,16 +34,12 @@ export default function SearchBar() {
       return // Instant return!
     }
 
-    if (!apiKey) {
-      setShowSettings(true)
-      return
-    }
-
     setLoading(true)
     setError(null)
 
     try {
-      const result = await generateIdeaMap(q, apiKey)
+      // Backend handles the API key now
+      const result = await generateIdeaMap(q)
       setCurrentResult(result, q)
       addToHistory(q)
     } catch (err) {
@@ -72,7 +66,7 @@ export default function SearchBar() {
     }
     window.addEventListener('idea-engine:search', handler)
     return () => window.removeEventListener('idea-engine:search', handler)
-  }, [apiKey])
+  }, [])
 
   // Cmd/Ctrl+K focus shortcut
   useEffect(() => {

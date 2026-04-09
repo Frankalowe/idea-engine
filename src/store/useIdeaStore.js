@@ -26,7 +26,7 @@ export const useIdeaStore = create(
       history: [],
       resultsCache: {}, 
       nodeDescriptionsCache: {}, 
-      scriptsCache: {}, // { label: scriptData }
+      scriptsCache: {}, 
       selectedNodeDescription: null,
       selectedNodeScript: null,
       isLoading: false,
@@ -35,7 +35,6 @@ export const useIdeaStore = create(
       explainingNodeId: null,
       error: null,
       activeView: 'explore',
-      apiKey: '',
       showSettings: false,
 
       // Actions
@@ -54,7 +53,6 @@ export const useIdeaStore = create(
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error, isLoading: false, isExplaining: false, isScripting: false, explainingNodeId: null }),
       setView: (view) => set({ activeView: view }),
-      setApiKey: (apiKey) => set({ apiKey }),
       setShowSettings: (show) => set({ showSettings: show }),
 
       saveIdea: () => {
@@ -103,8 +101,8 @@ export const useIdeaStore = create(
       },
 
       fetchNodeDescription: async (nodeId, label) => {
-        const { currentPhrase, apiKey, nodeDescriptionsCache, isExplaining } = get()
-        if (isExplaining || !apiKey) return
+        const { currentPhrase, nodeDescriptionsCache, isExplaining } = get()
+        if (isExplaining) return
         if (nodeDescriptionsCache[label]) {
           set({ selectedNodeDescription: nodeDescriptionsCache[label] })
           window.dispatchEvent(new CustomEvent('idea-engine:tab-change', { detail: 'about' }))
@@ -112,7 +110,7 @@ export const useIdeaStore = create(
         }
         set({ isExplaining: true, explainingNodeId: nodeId })
         try {
-          const data = await fetchTopicDescription(label, currentPhrase, apiKey)
+          const data = await fetchTopicDescription(label, currentPhrase)
           set({
             selectedNodeDescription: data,
             nodeDescriptionsCache: { ...nodeDescriptionsCache, [label]: data },
@@ -126,15 +124,15 @@ export const useIdeaStore = create(
       },
 
       fetchNodeScript: async (label) => {
-        const { currentPhrase, apiKey, scriptsCache, isScripting } = get()
-        if (isScripting || !apiKey) return
+        const { currentPhrase, scriptsCache, isScripting } = get()
+        if (isScripting) return
         if (scriptsCache[label]) {
           set({ selectedNodeScript: scriptsCache[label] })
           return
         }
         set({ isScripting: true })
         try {
-          const data = await fetchTopicScript(label, currentPhrase, apiKey)
+          const data = await fetchTopicScript(label, currentPhrase)
           set({
             selectedNodeScript: data,
             scriptsCache: { ...scriptsCache, [label]: data },
@@ -151,7 +149,6 @@ export const useIdeaStore = create(
       partialize: (state) => ({
         library: state.library,
         history: state.history,
-        apiKey: state.apiKey,
         resultsCache: state.resultsCache,
         nodeDescriptionsCache: state.nodeDescriptionsCache,
         scriptsCache: state.scriptsCache,

@@ -1,13 +1,10 @@
-import { Compass, BookOpen, Clock, Settings, Zap } from 'lucide-react'
+import { Compass, BookOpen, Clock, Zap } from 'lucide-react'
 import { useIdeaStore } from '../store/useIdeaStore'
 
 export default function Sidebar() {
-  const { activeView, setView, history, setCurrentResult, setShowSettings, addToHistory } =
-    useIdeaStore()
+  const { activeView, setView, history } = useIdeaStore()
 
   const handleHistoryClick = (phrase) => {
-    // Re-trigger search from history is handled via SearchBar
-    // We just navigate to explore and populate via custom event
     window.dispatchEvent(new CustomEvent('idea-engine:search', { detail: phrase }))
     setView('explore')
   }
@@ -69,16 +66,14 @@ export default function Sidebar() {
         ))}
       </div>
 
-      {/* Bottom */}
+      {/* Bottom info */}
       <div className="sidebar-bottom">
-        <button
-          id="btn-settings"
-          className="sidebar-nav-item w-full"
-          onClick={() => setShowSettings(true)}
-        >
-          <Settings size={16} className="nav-icon" />
-          API Settings
-        </button>
+        <div className="sidebar-nav-item w-full" style={{ opacity: 0.6, cursor: 'default' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+             <span className="sidebar-logo-icon" style={{ width: 14, height: 14, fontSize: 8 }}>✓</span>
+             Secured by Vercel
+          </div>
+        </div>
       </div>
     </aside>
   )

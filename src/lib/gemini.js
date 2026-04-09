@@ -1,179 +1,58 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+/**
+ * Client-side proxy for the Vercel Backend.
+ * All AI generation is now handled securely on the server.
+ */
 
-const CATEGORY_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']
-const CATEGORY_ICONS = ['🎯', '💡', '🚀', '🌟', '🔥']
+export async function generateIdeaMap(phrase) {
+  const response = await fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'generate',
+      payload: { phrase }
+    })
+  });
 
-function buildPrompt(phrase) {
-  return `You are an expert YouTube content strategist. Analyze the following phrase/topic and return a comprehensive content strategy.
-
-PHRASE: "${phrase}"
-
-Return ONLY a valid JSON object with NO markdown, NO code blocks, NO explanation — just raw JSON.
-
-Use this EXACT structure:
-{
-  "mainTopic": "Clean version of the main topic",
-  "categories": [
-    {
-      "id": "cat_0",
-      "name": "Category Name",
-      "color": "${CATEGORY_COLORS[0]}",
-      "icon": "${CATEGORY_ICONS[0]}",
-      "subcategories": ["Subtopic A", "Subtopic B", "Subtopic C"]
-    }
-  ],
-  "mindMap": {
-    "nodes": [
-      {"id": "root", "label": "Main Topic", "type": "root"},
-      {"id": "cat_0", "label": "Category 1", "type": "category", "categoryIndex": 0},
-      {"id": "cat_0_sub_0", "label": "Subtopic A", "type": "subtopic", "categoryIndex": 0},
-      {"id": "cat_0_sub_1", "label": "Subtopic B", "type": "subtopic", "categoryIndex": 0},
-      {"id": "cat_0_sub_2", "label": "Subtopic C", "type": "subtopic", "categoryIndex": 0}
-    ],
-    "edges": [
-      {"id": "e_root_cat0", "source": "root", "target": "cat_0"},
-      {"id": "e_cat0_sub0", "source": "cat_0", "target": "cat_0_sub_0"},
-      {"id": "e_cat0_sub1", "source": "cat_0", "target": "cat_0_sub_1"},
-      {"id": "e_cat0_sub2", "source": "cat_0", "target": "cat_0_sub_2"}
-    ]
-  },
-  "videoTitles": [
-    "YouTube title hook 1",
-    "YouTube title hook 2",
-    "YouTube title hook 3",
-    "YouTube title hook 4",
-    "YouTube title hook 5"
-  ],
-  "outline": {
-    "intro": "Compelling hook and context to open the video",
-    "points": [
-      {"title": "Point 1 Title", "description": "Specific content to cover in this section"},
-      {"title": "Point 2 Title", "description": "Specific content to cover in this section"},
-      {"title": "Point 3 Title", "description": "Specific content to cover in this section"},
-      {"title": "Point 4 Title", "description": "Specific content to cover in this section"},
-      {"title": "Point 5 Title", "description": "Specific content to cover in this section"}
-    ],
-    "cta": "Strong call to action to end the video"
-  },
-  "relatedIdeas": [
-    "Related topic idea 1",
-    "Related topic idea 2",
-    "Related topic idea 3",
-    "Related topic idea 4",
-    "Related topic idea 5"
-  ]
-}
-
-Rules:
-- Generate exactly 3-5 categories relevant to the phrase
-- Use the colors in order: ${CATEGORY_COLORS.join(', ')}
-- Use the icons in order: ${CATEGORY_ICONS.join(', ')}
-- Each category gets 3-4 subcategories in the mind map
-- Video titles must be engaging YouTube hooks (use numbers, emotion, curiosity)
-- Outline points should give specific, actionable content ideas
-- Related ideas should be adjacent topics the creator could cover next`
-}
-
-function buildDescriptionPrompt(topic, mainPhrase) {
-  return `You are a world-class YouTube content consultant. Analyze the following specific sub-topic within the context of "${mainPhrase}".
-
-SUB-TOPIC: "${topic}"
-
-Return ONLY a valid JSON object with NO markdown, NO code blocks.
-
-Use this structure:
-{
-  "topic": "${topic}",
-  "description": "Clear, expert-level explanation (2-3 paragraphs) of why this topic matters and how it fits the niche.",
-  "expertTips": [
-    "Expert insight or secret tip related to this topic",
-    "Pro-level mistake to avoid",
-    "Niche-specific hack for growth"
-  ],
-  "angles": [
-    {"label": "The Educational Hook", "text": "A specific educational angle for a video"},
-    {"label": "The Storytelling Hook", "text": "A specific narrative/vlog angle for a video"}
-  ]
-}`
-}
-
-function buildScriptPrompt(topic, mainPhrase) {
-  return `You are a professional YouTube scriptwriter. Write a high-engagement, conversational video script for the topic: "${topic}" (context: ${mainPhrase}).
-
-The script should be roughly 10 minutes long if spoken. Focus on high retention.
-
-Return ONLY a valid JSON object with NO markdown, NO code blocks.
-
-Use this structure:
-{
-  "title": "Working Title of the Video",
-  "hook": "Intense, high-energy opening lines (0-30 seconds)",
-  "segments": [
-    {
-      "title": "Segment Header",
-      "content": "Fully written spoken script for this section",
-      "visualCue": "What should be on screen here? (e.g. B-roll of city, screen recording of app, etc.)"
-    }
-  ],
-  "outro": "Concluding thoughts and a strong call to action"
-}
-
-Rules:
-- Write in a natural, conversational style (use "I", "you", "we").
-- Keep segments focused and punchy.
-- Include exactly 4-6 segments.`
-}
-
-export async function generateIdeaMap(phrase, apiKey) {
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
-  const result = await model.generateContent(buildPrompt(phrase))
-  const text = result.response.text().trim()
-
-  let jsonText = text
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (jsonMatch) jsonText = jsonMatch[0]
-
-  try {
-    return JSON.parse(jsonText)
-  } catch {
-    throw new Error('AI returned an invalid response. Please try again.')
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate idea map');
   }
+
+  return response.json();
 }
 
-export async function fetchTopicDescription(topic, mainPhrase, apiKey) {
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+export async function fetchTopicDescription(topic, mainPhrase) {
+  const response = await fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'describe',
+      payload: { topic, mainPhrase }
+    })
+  });
 
-  const result = await model.generateContent(buildDescriptionPrompt(topic, mainPhrase))
-  const text = result.response.text().trim()
-
-  let jsonText = text
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (jsonMatch) jsonText = jsonMatch[0]
-
-  try {
-    return JSON.parse(jsonText)
-  } catch {
-    throw new Error('AI failed to explain this topic. Please try again.')
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to explain topic');
   }
+
+  return response.json();
 }
 
-export async function fetchTopicScript(topic, mainPhrase, apiKey) {
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+export async function fetchTopicScript(topic, mainPhrase) {
+  const response = await fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'script',
+      payload: { topic, mainPhrase }
+    })
+  });
 
-  const result = await model.generateContent(buildScriptPrompt(topic, mainPhrase))
-  const text = result.response.text().trim()
-
-  let jsonText = text
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (jsonMatch) jsonText = jsonMatch[0]
-
-  try {
-    return JSON.parse(jsonText)
-  } catch {
-    throw new Error('AI failed to generate a script. Please try again.')
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate script');
   }
+
+  return response.json();
 }
