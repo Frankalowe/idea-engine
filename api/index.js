@@ -92,7 +92,9 @@ export default async function handler(req, res) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' }); // Use Pro for longer outputs
+  
+  // Using Gemini 2.0 Flash - The latest high-performance model in 2026
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   try {
     let prompt = '';
