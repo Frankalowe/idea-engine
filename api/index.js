@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const CATEGORY_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 const CATEGORY_ICONS = ['🎯', '💡', '🚀', '🌟', '🔥'];
 
-// --- Prompt Builders (Moved from frontend) ---
+// --- Prompt Builders ---
 function buildPrompt(phrase) {
   return `You are an expert YouTube content strategist. Analyze the following phrase/topic and return a comprehensive content strategy.
 PHRASE: "${phrase}"
@@ -53,14 +53,29 @@ Return ONLY a valid JSON object with NO markdown, NO code blocks.
 }
 
 function buildScriptPrompt(topic, mainPhrase) {
-  return `Professional YouTube scriptwriter. Write a conversational script for: "${topic}" (context: ${mainPhrase}).
+  return `Professional YouTube scriptwriter. Write a conversational, high-quality script for the topic: "${topic}" (context: ${mainPhrase}).
+The script MUST be long enough for a 12-15 minute video (approximately 1800-2200 words).
+
 Return ONLY a valid JSON object with NO markdown, NO code blocks.
+
+Use this EXACT structure:
 {
-  "title": "Title",
-  "hook": "Hook copy",
-  "segments": [{"title": "S1", "content": "C1", "visualCue": "V1"}],
-  "outro": "Outro copy"
-}`;
+  "title": "Professional Video Title",
+  "hook": "Compelling, high-retention opening (30-60 seconds of spoken content)",
+  "segments": [
+    {
+      "title": "Segment Heading",
+      "content": "A detailed, conversational section of the script. Focus on stories, data, and deep explanation.",
+      "visualCue": "B-roll, overlays, or set instructions"
+    }
+  ],
+  "outro": "Deep summary and powerful call to action"
+}
+
+Rules:
+- Generate 8 to 12 detailed segments.
+- Each segment's 'content' must be substantial (at least 200 words).
+- Use a natural, conversational tone with storytelling elements to keep retention high.`;
 }
 
 // --- Serverless Handler ---
@@ -77,7 +92,7 @@ export default async function handler(req, res) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' }); // Use Pro for longer outputs
 
   try {
     let prompt = '';
