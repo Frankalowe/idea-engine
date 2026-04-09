@@ -105,7 +105,7 @@ function buildLayout(rawNodes, rawEdges) {
 
   const positions = {}
   const NODE_H = 80
-  const LEVEL_W = 240
+  const LEVEL_W = 320
 
   function assign(id, x, startY, endY) {
     const midY = (startY + endY) / 2
